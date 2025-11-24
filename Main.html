@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Clasificación por Atributo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; background: #f3f3f3; padding: 15px; }
+
+    h1 { text-align: center; font-size: 1.6rem; margin-bottom: 15px; }
+
+    .atributo {
+      background: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+
+    th { background: #efefef; text-align: left; padding: 10px; font-size: 0.9rem; }
+    td { padding: 10px; font-size: 0.9rem; border-bottom: 1px solid #eaeaea; }
+
+    button.rank-btn {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.9rem;
+      width: 100%;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    button.selected { background: #4CAF50; color: white; }
+    button.unselected { background: #dcdcdc; }
+
+    #resultado {
+      margin-top: 25px;
+      background: #fff;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    #resultado table th, #resultado table td {
+      white-space: nowrap;
+      text-align: center;
+      font-size: 0.85rem;
+      padding: 6px;
+    }
+
+    /* MODO CELULAR */
+    @media (max-width: 600px) {
+      h1 { font-size: 1.3rem; }
+      td, th { font-size: 0.8rem; padding: 6px; }
+      button.rank-btn { font-size: 0.8rem; padding: 6px 8px; }
+      .atributo { padding: 12px; }
+      table { font-size: 0.85rem; }
+      #resultado table { display: block; overflow-x: auto; }
+    }
+</style>
+</head>
+<body>
+  <h1>Clasificación de Medias por Atributo</h1>
+  <p>Haz clic en los jugadores por orden. El primero que pulses será Top 1, luego Top 2, etc. Si vuelves a pulsar un jugador, se borra su posición.</p>
+
+  <form>
+    <script>
+      const jugadores = ["Alan", "Bastian", "Bizama", "Brandon", "Cris", "Edgardo", "Inuti", "Jaime", "Jeldres", "Jorge", "Lucho", "Nacho", "Nico", "Pablo", "Runi", "Seba"];
+      const atributos = ["Ritmo", "Tiro", "Pase", "Regate", "Defensa", "Físico"];
+
+      function crearSistema(attr) {
+        let orden = []; // orden de clics
+
+        return function toggleJugador(nombre, btn) {
+          const idx = orden.indexOf(nombre);
+
+          if (idx === -1) {
+            // No estaba seleccionado -> agregar
+            orden.push(nombre);
+            btn.classList.remove("unselected");
+            btn.classList.add("selected");
+            btn.innerText = `#${orden.length}`;
+          } else {
+            // Ya estaba -> quitar
+            orden.splice(idx, 1);
+            btn.classList.remove("selected");
+            btn.classList.add("unselected");
+            btn.innerText = "Seleccionar";
+
+            // Reordenar números de posiciones en botones
+            const botones = document.querySelectorAll(`[data-attr='${attr}']`);
+            botones.forEach(b => {
+              const name = b.getAttribute("data-name");
+              const pos = orden.indexOf(name);
+              if (pos === -1) {
+                b.innerText = "Seleccionar";
+              } else {
+                b.innerText = `#${pos + 1}`;
+              }
+            });
+          }
+        };
+      }
+
+      atributos.forEach(attr => {
+        document.write(`<div class='atributo'><h2>${attr}</h2>`);
+        document.write(`<table><tr><th>Jugador</th><th>Posición</th></tr>`);
+
+        const controlador = `ctrl_${attr.replace(/ /g, '')}`;
+        window[controlador] = crearSistema(attr);
+
+        jugadores.forEach(j => {
+          document.write(`
+            <tr>
+              <td>${j}</td>
+              <td>
+                <button type='button' class='rank-btn unselected' data-attr='${attr}' data-name='${j}' onclick="${controlador}('${j}', this)">Seleccionar</button>
+              </td>
+            </tr>`);
+        });
+
+        document.write(`</table></div>`);
+      });
+    </script>
+
+    <button type="submit">Enviar</button>
+  </form>
+
+<div id="resultado" style="display:none; margin-top:30px; background:#fff; padding:15px; border-radius:10px; box-shadow:0 0 5px rgba(0,0,0,0.1);"></div>
+<script>
+  document.querySelector('form').addEventListener('submit', function(e){
+    e.preventDefault();
+
+    const resumen = {};
+    atributos.forEach(attr => resumen[attr] = []);
+
+    // obtener orden de cada atributo desde los botones
+    atributos.forEach(attr => {
+      const botones = document.querySelectorAll(`[data-attr='${attr}']`);
+      let orden = [];
+      botones.forEach(b => {
+        const pos = b.innerText.startsWith('#') ? parseInt(b.innerText.replace('#','')) : null;
+        orden.push({ jugador: b.getAttribute('data-name'), pos: pos });
+      });
+      orden.sort((a,b)=> (a.pos||999)-(b.pos||999));
+      resumen[attr] = orden.map(o => o.jugador);
+    });
+
+    // construir tabla
+    let html = '<h2>Resumen Final</h2><table border=1 cellpadding=6><tr><th>Jugador</th>';
+    atributos.forEach(attr => html += `<th>${attr}</th>`);
+    html += '</tr>';
+
+    jugadores.forEach(j => {
+      html += `<tr><td>${j}</td>`;
+      atributos.forEach(attr => {
+        let pos = resumen[attr].indexOf(j);
+        html += `<td>${pos===-1 ? '-' : pos+1}</td>`;
+      });
+      html += '</tr>';
+    });
+    html += '</table><br>';
+
+    // botón copiar
+    html += `<button onclick="copiarResumen()">Copiar y compartir</button>`;
+
+    document.getElementById('resultado').innerHTML = html;
+    document.getElementById('resultado').style.display = 'block';
+
+    window.resumenTexto = generarTextoResumen(resumen);
+  });
+
+  function generarTextoResumen(resumen){
+    // Use template literals for safe multiline strings
+    let txt = `📊 *Resumen de Rankings*\n`;
+    atributos.forEach(attr => {
+      txt += `\n*${attr}*:\n`;
+      resumen[attr].forEach((j,i)=>{
+        txt += `${i+1}. ${j}\n`;
+      });
+    });
+    return txt;
+  }
+
+  function copiarResumen(){
+    navigator.clipboard.writeText(window.resumenTexto).then(()=>{
+      alert('Resumen copiado. Pégalo en WhatsApp.');
+    });
+  }
+</script>
+</body>
+</html>
