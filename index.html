@@ -157,7 +157,8 @@
       html += `<tr><td>${j}</td>`;
       atributos.forEach(attr => {
         let pos = resumen[attr].indexOf(j);
-        html += `<td>${pos===-1 ? '-' : pos+1}</td>`;
+        // Si no está seleccionado, asignar 0
+        html += `<td>${pos===-1 ? '0' : pos+1}</td>`;
       });
       html += '</tr>';
     });
@@ -173,12 +174,13 @@
   });
 
   function generarTextoResumen(resumen){
-    // Use template literals for safe multiline strings
+    // Generar texto incluyendo posición 0 para no seleccionados
     let txt = `📊 *Resumen de Rankings*\n`;
     atributos.forEach(attr => {
       txt += `\n*${attr}*:\n`;
-      resumen[attr].forEach((j,i)=>{
-        txt += `${i+1}. ${j}\n`;
+      jugadores.forEach(j => {
+        let pos = resumen[attr].indexOf(j);
+        txt += `${j}: ${pos===-1 ? 0 : pos+1}\n`;
       });
     });
     return txt;
